@@ -20,8 +20,9 @@ import * as assert from 'assert';
 import * as sinon from 'sinon';
 import { getNodeAutoInstrumentations } from '../src';
 import {
-  getNodeInstrumentationEnabledFromEnv,
+  isInstrumentationEnabledFromEnv,
   getResourceDetectorsFromEnv,
+  extractInstrumentationEnvNameFromPackageName,
 } from '../src/utils';
 
 describe('utils', () => {
@@ -113,11 +114,11 @@ describe('utils', () => {
     });
   });
 
-  describe('getNodeInstrumentationEnabledFromEnv', () => {
+  describe('isInstrumentationEnabledFromEnv', () => {
     it('should return true if env is set to true', () => {
       process.env.OTEL_INSTRUMENTATION_FS_ENABLED = 'true';
 
-      const enabled = getNodeInstrumentationEnabledFromEnv(
+      const enabled = isInstrumentationEnabledFromEnv(
         '@opentelemetry/instrumentation-fs'
       );
 
@@ -129,7 +130,7 @@ describe('utils', () => {
     it('should return false if env is set to false', () => {
       process.env.OTEL_INSTRUMENTATION_FS_ENABLED = 'false';
 
-      const enabled = getNodeInstrumentationEnabledFromEnv(
+      const enabled = isInstrumentationEnabledFromEnv(
         '@opentelemetry/instrumentation-fs'
       );
 
@@ -139,11 +140,37 @@ describe('utils', () => {
     });
 
     it('should return undefined if env not set', () => {
-      const enabled = getNodeInstrumentationEnabledFromEnv(
+      const enabled = isInstrumentationEnabledFromEnv(
         '@opentelemetry/instrumentation-fs'
       );
 
       assert.equal(enabled, undefined);
+    });
+
+    it('should return undefined if instrumentation name extraction failed', () => {
+      const enabled = isInstrumentationEnabledFromEnv('fs');
+
+      assert.equal(enabled, undefined);
+    });
+  });
+
+  describe('extractInstrumentationEnvNameFromPackageName', () => {
+    it('should return non empty string on valid instrumentation package name', () => {
+      const instrumentationEnvName =
+        extractInstrumentationEnvNameFromPackageName(
+          '@opentelemetry/instrumentation-fs'
+        );
+
+      assert.equal(instrumentationEnvName, 'FS');
+    });
+
+    it('should replace dash with underscore', () => {
+      const instrumentationEnvName =
+        extractInstrumentationEnvNameFromPackageName(
+          '@opentelemetry/instrumentation-aws-sdk'
+        );
+
+      assert.equal(instrumentationEnvName, 'AWS_SDK');
     });
   });
 
