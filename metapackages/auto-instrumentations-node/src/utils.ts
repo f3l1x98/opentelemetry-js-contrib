@@ -150,6 +150,11 @@ export function getNodeAutoInstrumentations(
     const Instance = InstrumentationMap[name];
     // Defaults are defined by the instrumentation itself
     const userConfig: any = inputConfigs[name] ?? {};
+    const instrumentationEnabledEnv =
+      getNodeInstrumentationEnabledFromEnv(name);
+    if (instrumentationEnabledEnv !== undefined) {
+      userConfig.enabled = instrumentationEnabledEnv;
+    }
 
     if (userConfig.enabled === false) {
       diag.debug(`Disabling instrumentation for ${name}`);
@@ -165,6 +170,27 @@ export function getNodeAutoInstrumentations(
   }
 
   return instrumentations;
+}
+
+export function getNodeInstrumentationEnabledFromEnv(
+  instrumentationName: string
+): boolean | undefined {
+  const instrumentationNamePrefix = '@opentelemetry/instrumentation-';
+
+  let instrumentationEnvName = instrumentationName;
+  if (instrumentationName.startsWith(instrumentationNamePrefix)) {
+    instrumentationEnvName = instrumentationName.substring(
+      instrumentationNamePrefix.length
+    );
+  }
+  instrumentationEnvName = instrumentationEnvName
+    .toUpperCase()
+    .replace('-', '_');
+
+  const envValue =
+    process.env[`OTEL_INSTRUMENTATION_${instrumentationEnvName}_ENABLED`];
+  if (envValue === undefined) return undefined;
+  return envValue === 'true';
 }
 
 export function getResourceDetectorsFromEnv(): Array<Detector | DetectorSync> {
