@@ -19,7 +19,10 @@ import { HttpInstrumentationConfig } from '@opentelemetry/instrumentation-http';
 import * as assert from 'assert';
 import * as sinon from 'sinon';
 import { getNodeAutoInstrumentations } from '../src';
-import { getResourceDetectorsFromEnv } from '../src/utils';
+import {
+  getNodeInstrumentationEnabledFromEnv,
+  getResourceDetectorsFromEnv,
+} from '../src/utils';
 
 describe('utils', () => {
   describe('getNodeAutoInstrumentations', () => {
@@ -90,6 +93,57 @@ describe('utils', () => {
       );
 
       spy.restore();
+    });
+
+    it('should prioritize env enabled', () => {
+      process.env.OTEL_INSTRUMENTATION_GRPC_ENABLED = 'false';
+
+      const instrumentations = getNodeAutoInstrumentations({
+        '@opentelemetry/instrumentation-grpc': {
+          enabled: true,
+        },
+      });
+      const instrumentation = instrumentations.find(
+        instr =>
+          instr.instrumentationName === '@opentelemetry/instrumentation-grpc'
+      );
+      assert.strictEqual(instrumentation, undefined);
+
+      delete process.env.OTEL_INSTRUMENTATION_GRPC_ENABLED;
+    });
+  });
+
+  describe('getNodeInstrumentationEnabledFromEnv', () => {
+    it('should return true if env is set to true', () => {
+      process.env.OTEL_INSTRUMENTATION_FS_ENABLED = 'true';
+
+      const enabled = getNodeInstrumentationEnabledFromEnv(
+        '@opentelemetry/instrumentation-fs'
+      );
+
+      assert.equal(enabled, true);
+
+      delete process.env.OTEL_INSTRUMENTATION_FS_ENABLED;
+    });
+
+    it('should return false if env is set to false', () => {
+      process.env.OTEL_INSTRUMENTATION_FS_ENABLED = 'false';
+
+      const enabled = getNodeInstrumentationEnabledFromEnv(
+        '@opentelemetry/instrumentation-fs'
+      );
+
+      assert.equal(enabled, false);
+
+      delete process.env.OTEL_INSTRUMENTATION_FS_ENABLED;
+    });
+
+    it('should return undefined if env not set', () => {
+      const enabled = getNodeInstrumentationEnabledFromEnv(
+        '@opentelemetry/instrumentation-fs'
+      );
+
+      assert.equal(enabled, undefined);
     });
   });
 
