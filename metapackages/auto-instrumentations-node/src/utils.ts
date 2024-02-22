@@ -150,8 +150,7 @@ export function getNodeAutoInstrumentations(
     const Instance = InstrumentationMap[name];
     // Defaults are defined by the instrumentation itself
     const userConfig: any = inputConfigs[name] ?? {};
-    const instrumentationEnabledEnv =
-      getNodeInstrumentationEnabledFromEnv(name);
+    const instrumentationEnabledEnv = isInstrumentationEnabledFromEnv(name);
     if (instrumentationEnabledEnv !== undefined) {
       userConfig.enabled = instrumentationEnabledEnv;
     }
@@ -172,25 +171,39 @@ export function getNodeAutoInstrumentations(
   return instrumentations;
 }
 
-export function getNodeInstrumentationEnabledFromEnv(
+export function isInstrumentationEnabledFromEnv(
   instrumentationName: string
 ): boolean | undefined {
-  const instrumentationNamePrefix = '@opentelemetry/instrumentation-';
-
-  let instrumentationEnvName = instrumentationName;
-  if (instrumentationName.startsWith(instrumentationNamePrefix)) {
-    instrumentationEnvName = instrumentationName.substring(
-      instrumentationNamePrefix.length
-    );
+  const instrumentationEnvName =
+    extractInstrumentationEnvNameFromPackageName(instrumentationName);
+  if (instrumentationEnvName === undefined) {
+    return undefined;
   }
-  instrumentationEnvName = instrumentationEnvName
-    .toUpperCase()
-    .replace('-', '_');
 
   const envValue =
     process.env[`OTEL_INSTRUMENTATION_${instrumentationEnvName}_ENABLED`];
   if (envValue === undefined) return undefined;
   return envValue === 'true';
+}
+
+export function extractInstrumentationEnvNameFromPackageName(
+  instrumentationPackageName: string
+): string | undefined {
+  const instrumentationNamePrefix = '@opentelemetry/instrumentation-';
+
+  if (
+    !instrumentationPackageName.startsWith(instrumentationNamePrefix) ||
+    instrumentationPackageName === instrumentationNamePrefix
+  ) {
+    diag.debug(
+      `Unable to extract instrumentation env name from ${instrumentationPackageName}`
+    );
+    return undefined;
+  }
+  return instrumentationPackageName
+    .substring(instrumentationNamePrefix.length)
+    .toUpperCase()
+    .replace('-', '_');
 }
 
 export function getResourceDetectorsFromEnv(): Array<Detector | DetectorSync> {
